@@ -71,7 +71,7 @@ def _stacked_sankey(df, *columns):
     return stacked
 
 
-def make_sankey(df, *cols, vals=None, save=None, **kwargs):
+def make_sankey(df, *cols, vals, save=None, **kwargs):
     """ Create the Sankey diagram from a given dataframe
 
     Args:
@@ -84,7 +84,7 @@ def make_sankey(df, *cols, vals=None, save=None, **kwargs):
         Shows the Sankey diagram
         """
     # Checks if values column is part of the dataframe -> else, just sets values = 1 for every relationship
-    if vals is not None:
+    if vals:
         values = df[vals]
     else:
         values = [1] * len(df)
