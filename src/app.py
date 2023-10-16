@@ -3,8 +3,6 @@ Runs the Dash dashboard interface
 DS3500 HW2
 Authors: Srihari Raman & Reema Sharma
 """
-
-# Required imports
 from dash import Dash, dcc, html, dash_table, Input, Output
 import plotly.express as px
 import pandas as pd
@@ -16,21 +14,21 @@ import sankey as sk
 df = pd.read_csv('https://raw.githubusercontent.com/thealphacubicle/'
                  'BlueBike-Dashboard/main/src/bluebike_trunc.csv')
 
-# Create a Dash app instance with bootstrap styles
+# Create a Dash app with bootstrap styles
 app = Dash(__name__, external_stylesheets=[dbc.themes.LUX])
 
 # Define the app layout
 app.layout = dbc.Container([
 
     # TODO: Change background color to white
-    # Add a Navigation Bar as the title for the dashboard
+    # Dashboard navbar
     dbc.NavbarSimple(brand="Blue Bike Ridership Visualization",
                      color="blue", dark=False, id="nav-bar",
                      style={'background': 'black',
-                            'font-color': "lightblue", 'text-align': 'center'},
+                            'font-color': "white", 'text-align': 'center'},
                      brand_style={'fontSize': '40px'}),
 
-    # Add about section to project
+    # TODO: Add about section to project
     html.Div([
         html.H2("About the Project", style={'text-align': 'center', 'padding-top': '20px'}),
 
@@ -43,7 +41,7 @@ app.layout = dbc.Container([
     dbc.Row([
         html.H2("Explore the Data", style={'text-align': 'center', 'padding-top': '20px'}),
 
-        # Form to select columns to explore dataset
+        # Select columns to explore dataset
         dbc.Col(children=[
             dbc.Label('Pick a column to explore: ', style={'padding-bottom': '10px'}),
             dcc.Dropdown(id='columns-eda-dropdown',
@@ -52,23 +50,42 @@ app.layout = dbc.Container([
                          ,
                          value=df.columns[-1], multi=False),
 
+            # Describing the selected column
             dbc.Label("Description: ", style={'padding-top': '35px', 'font-weight': 'bold'}),
             html.P(children="CREATE CALLBACK FUNCTION TO INSERT METADATA DESCRIPTION HERE!!!",
                    style={'padding-top': '10px', 'padding-bottom': '15px'}, id="column_description_text"),
 
+
+            # Displaying statistics of selected column with indicators
             dbc.Label("Statistics: ", style={'padding-top': '20px', 'font-weight': 'bold'}),
-            dcc.Graph(id="column_statistics")
-
+            dbc.Row([
+                dbc.Col(dcc.Graph(figure=go.Figure(go.Indicator(
+                    mode='number',
+                    value=df['member_casual'].value_counts()['member'],
+                    title={'text': "Number of Member Riders"})),
+                ), width=4),
+                dbc.Col(dcc.Graph(figure=go.Figure(go.Indicator(
+                    mode='number',
+                    value=df['member_casual'].value_counts()['casual'],
+                    title={'text': "REPLACE WITH DIFF METRIC"})),
+                ), width=4),
+                dbc.Col(dcc.Graph(figure=go.Figure(go.Indicator(
+                    mode='number',
+                    value=len(df.index),
+                    title={'text': "REPLACE WITH DIFF METRIC #2"})),
+                ), width=4)
+            ]),
         ]),
 
-        dbc.Col([
-            #dbc.Col(dcc.Graph(id="column_statistics_num"), width=15),
-        ]),
+        # TODO: Replace this with some other useful graph about chosen column
+        dcc.Graph(id="column_statistics"),
 
         html.Hr()
     ]),
 
+    # Add two other useful graphs
     dbc.Row([
+        # TODO: Edit this ride type graph -> it's redundant and useless
         dbc.Col(dcc.Graph(id='ride-type-bar-chart'), width=6),
         dbc.Col(dcc.Graph(id='rides-map'), width=6)
     ])
@@ -101,11 +118,9 @@ def viz_statistics_of_column(column):
     """
     # Compute the value counts
     value_counts = df[column].value_counts()
-    places = ['start_station_name', 'end_station_name']
 
     # Displaying bar chart for columns that are numbers
     if column not in ['started_at', 'ended_at', 'start_station_name', 'end_station_name']:
-        # Plot the value counts
         fig = px.bar(
             data_frame=value_counts.reset_index(),
             x=column,
@@ -116,29 +131,18 @@ def viz_statistics_of_column(column):
 
     # Displaying sankey diagram for columns that are departure/arrival stations
     elif column in places:
-        other_column = places[1 - places.index(column)]
-
-        print(column, other_column)
         counts_df = sk.create_value_column(df, ['member_casual', column], 'count')
 
         counts_df = counts_df[counts_df['count'] >= 850]
 
         fig = sk.make_sankey(counts_df, 'member_casual', column,
-                       vals=None, return_fig=True)
+                             vals=None, return_fig=True)
+
+    # Figure out how to deal with started_at, ended_at columns
+    else:
+        fig = None
 
     return fig
-
-
-# TODO: Write code for indicator (dependent on column dtype)
-# @app.callback(Output("column_statistics_num", "figure"), Input('columns-eda-dropdown', 'value'))
-# def num_statistics_of_column(column):
-#     """
-#     Callback function to display an indicator about the column (dependent on column value type)
-#     :param column: Column to display information about
-#     :return: Indicator GO figure
-#     """
-#     pass
-
 
 # TODO: Replace this function with KDE plot for distances
 @app.callback(Output('ride-type-bar-chart', 'figure'), [Input('ride-type-bar-chart', 'id')])
@@ -148,11 +152,10 @@ def update_ride_type_bar_chart(_):
     return fig
 
 
-# TODO: Use distance column in df to create bubble map of origin/destination info for bikes
 @app.callback(Output('rides-map', 'figure'), [Input('rides-map', 'id')])
 def update_rides_map(_):
-    fig = px.scatter_mapbox(df, lat="start_lat", lon="start_lng", color="member_casual",
-                            title="Start and End Points of Rides", mapbox_style="open-street-map")
+    fig = px.scatter_mapbox(df, lat="start_lat", lon="start_lng", color="rideable_type",
+                            title="Selection Points of All Rides", mapbox_style="open-street-map")
 
     return fig
 
