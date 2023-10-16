@@ -22,15 +22,17 @@ app.layout = dbc.Container([
 
     # TODO: Change background color to white
     # Dashboard navbar
-    dbc.NavbarSimple(brand="Blue Bike Ridership Visualization",
-                     color="blue", dark=False, id="nav-bar",
-                     style={'background': 'black',
-                            'font-color': "white", 'text-align': 'center'},
-                     brand_style={'fontSize': '40px'}),
+    dbc.NavbarSimple(
+        brand="Blue Bike Ridership Visualization",
+        color="blue",
+        dark=True,
+        id="nav-bar",
+        style={'background': 'black', 'color': 'white', 'text-align': 'center'},
+        brand_style={'fontSize': '40px'}),
 
     # TODO: Add about section to project
     html.Div([
-        html.H2("About the Project", style={'text-align': 'center', 'padding-top': '20px'}),
+        html.H2("About the Project:", style={'text-align': 'center', 'padding-top': '20px'}),
 
         # TODO: Edit description once everything else is done
         html.P("TO BE CHANGED.", style={'text-align': 'center', 'padding-top': '15px'}),
@@ -39,7 +41,7 @@ app.layout = dbc.Container([
 
     # First row
     dbc.Row([
-        html.H2("Explore the Data", style={'text-align': 'center', 'padding-top': '20px'}),
+        html.H2("Explore the Data:", style={'text-align': 'center', 'padding-top': '20px'}),
 
         # Select columns to explore dataset
         dbc.Col(children=[
@@ -56,23 +58,26 @@ app.layout = dbc.Container([
                    style={'padding-top': '10px', 'padding-bottom': '15px'}, id="column_description_text"),
 
 
-            # Displaying statistics of selected column with indicators
-            dbc.Label("Statistics: ", style={'padding-top': '20px', 'font-weight': 'bold'}),
+            # TODO: Displaying statistics of selected column with indicators
+            html.H2("Statistics: ", style={'padding-top': '20px', 'font-weight': 'bold', 'text-align': 'center'}),
             dbc.Row([
                 dbc.Col(dcc.Graph(figure=go.Figure(go.Indicator(
                     mode='number',
-                    value=df['member_casual'].value_counts()['member'],
-                    title={'text': "Number of Member Riders"})),
+                    value=000,
+                    number={"prefix": "", "suffix": " miles"},
+                    title={'text': "Average Distance of Rides "})),
                 ), width=4),
                 dbc.Col(dcc.Graph(figure=go.Figure(go.Indicator(
                     mode='number',
-                    value=df['member_casual'].value_counts()['casual'],
-                    title={'text': "REPLACE WITH DIFF METRIC"})),
+                    value=000,
+                    number={"prefix": "", "suffix": " min"},
+                    title={'text': "Average Ride Duration"})),
                 ), width=4),
                 dbc.Col(dcc.Graph(figure=go.Figure(go.Indicator(
                     mode='number',
-                    value=len(df.index),
-                    title={'text': "REPLACE WITH DIFF METRIC #2"})),
+                    value=000,
+                    number={"prefix": "", "suffix": " mph"},
+                    title={'text': "Average Speed of All Riders"})),
                 ), width=4)
             ]),
         ]),
@@ -118,6 +123,7 @@ def viz_statistics_of_column(column):
     """
     # Compute the value counts
     value_counts = df[column].value_counts()
+    places = ['start_station_name', 'end_station_name']
 
     # Displaying bar chart for columns that are numbers
     if column not in ['started_at', 'ended_at', 'start_station_name', 'end_station_name']:
