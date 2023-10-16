@@ -39,6 +39,11 @@ def ride_duration(df, start_col, end_col):
 
     # Calculate time elapsed
     df['ride_duration'] = df[end_col] - df[start_col]
+
+    # Drop rows in the 'distance' column if 'ride_duration' is 0
+    df = df[df['ride_duration'] != 0]
+
+    # Create a column to store only the minutes and seconds
     df['ride_duration_minutes'] = df['ride_duration'].dt.total_seconds() / 60
 
     # Drop rows with time elapsed of 0
@@ -48,71 +53,73 @@ def ride_duration(df, start_col, end_col):
     return df
 
 
-def create_bubble_chart(df, dist_col, rider_type_col):
+def remove_outliers(df, col_name, user_type_col, z_threshold=2):
+    z_scores = (df[col_name] - df.groupby(user_type_col)[col_name].transform('mean'))\
+               / df.groupby(user_type_col)[col_name].transform('std')
+
+    # Create a Boolean column that determines whether the row contains an outlier or not
+    df['is_outlier'] = (z_scores < -z_threshold) | (z_scores > z_threshold)
+
+    # Count the number of outliers for each user type
+    outliers_count = df.groupby(user_type_col)['is_outlier'].sum().reset_index()
+
+    df_no_outliers = df[~df['is_outlier']].drop(columns=['is_outlier'])
+
+    return df_no_outliers, outliers_count
+
+
+def create_violin_plot(df, duration_col, rider_type_col, return_fig=False):
     # Remove outliers from the 'ride_duration_minutes' column
-    df = remove_outliers(df, 'ride_duration_minutes')
-    print(df['ride_duration_minutes'].max())
+    df = remove_outliers(df, duration_col, rider_type_col)[0]
 
-    # Create a figure and axis
-    fig, ax = plt.subplots()
-
-    # Define colors for member and casual riders
-    colors = {'member': 'blue', 'casual': 'red'}
-
-    # Plot the bubbles
-    for rider_type, group in df.groupby(rider_type_col):
-        ax.scatter(group[dist_col], group['ride_duration_minutes'], c=colors[rider_type], label=rider_type, alpha=0.7, s=100)
-
-    # Set axis labels and legend
-    ax.set_xlabel('Distance (km)')
-    ax.set_ylabel('Duration (minutes)')
-    ax.legend(title='Rider Type')
+    # Create the violin plot using Plotly Express
+    fig = px.violin(df, x=rider_type_col, y='ride_duration_minutes', color=rider_type_col,
+                    box=True, points="all", title='Violin Plot of Ride Duration by Rider Type',
+                    labels={'ride_duration_minutes': 'Duration (minutes)'},
+                    category_orders={rider_type_col: ['member', 'casual']})
 
     # Customize the plot
-    plt.title('Bubble Chart of Distance vs Duration by Rider Type')
-    plt.grid(True)
+    fig.update_traces(meanline_visible=True)
+    fig.update_layout(xaxis_title='Rider Type', yaxis_title='Duration (minutes)')
 
-    # Show the plot
-    plt.show()
-
-
-def remove_outliers(df, col_name, z_threshold=2):
-    z_scores = (df[col_name] - df[col_name].mean()) / df[col_name].std()
-    df_no_outliers = df[(z_scores >= -z_threshold) & (z_scores <= z_threshold)]
-    return df_no_outliers
+    if return_fig:
+        return fig
+    else:
+        fig.show()
 
 
-def time_series_plot(df, datetime_column, duration_column, member_column, member_value, casual_value, return_fig=False):
+def time_series_plot(df, datetime_col, duration_col, member_col, member_val, casual_val, return_fig=False):
     """
     Create a time series plot for ride duration over time.
 
     Parameters:
-    - df: DataFrame containing the data.
-    - datetime_column: Name of the column with datetime values.
-    - duration_column: Name of the column with ride duration values (in minutes as a float).
-    - member_column: Name of the column indicating member or casual status.
-    - member_value: Value indicating a member in the 'member_column'.
-    - casual_value: Value indicating a casual user in the 'member_column'.
+    - df: DataFrame
+    - datetime_col: Contains datetime values
+    - duration_col: Contains ride duration values (in minutes as a float)
+    - member_col: Indicates whether the rider is a member or casual user
+    - member_val: 'member' string indicating that user is a member
+    - casual_val: 'casual' string indicating that user is casual user
+    - return_fig: If True, return the Plotly figure; if False, display the figure.
     """
     # Create separate DataFrames for member and casual users
-    member_df = df[df[member_column] == member_value]
-    casual_df = df[df[member_column] == casual_value]
+    member_df = df[df[member_col] == member_val]
+    casual_df = df[df[member_col] == casual_val]
 
     # Group data by date and calculate the mean duration for each date
-    df = df.groupby(df[datetime_column].dt.date)[duration_column].mean().reset_index()
-    member_df = member_df.groupby(member_df[datetime_column].dt.date)[duration_column].mean().reset_index()
-    casual_df = casual_df.groupby(casual_df[datetime_column].dt.date)[duration_column].mean().reset_index()
+    df = df.groupby(df[datetime_col].dt.date)[duration_col].mean().reset_index()
+    member_df = member_df.groupby(member_df[datetime_col].dt.date)[duration_col].mean().reset_index()
+    casual_df = casual_df.groupby(casual_df[datetime_col].dt.date)[duration_col].mean().reset_index()
 
     # Create an interactive time series plot using Plotly
-    fig = px.line(df, x=datetime_column, y=duration_column, labels={'x': 'Date', 'y': 'Average Duration (minutes)'},
+    fig = px.line(df, x=datetime_col, y=duration_col, labels={'x': 'Date', 'y': 'Average Duration (minutes)'},
                   title='Ride Duration (Aggregated by Date) by Rider Type in 2023')
 
     # Add traces for member and casual data
-    fig.add_scatter(x=member_df[datetime_column], y=member_df[duration_column], mode='lines+markers',
+    fig.add_scatter(x=member_df[datetime_col], y=member_df[duration_col], mode='lines+markers',
                     name='Members')
-    fig.add_scatter(x=casual_df[datetime_column], y=casual_df[duration_column], mode='lines+markers',
+    fig.add_scatter(x=casual_df[datetime_col], y=casual_df[duration_col], mode='lines+markers',
                     name='Casual Users')
-    fig.add_scatter(x=df[datetime_column], y=df[duration_column], mode='lines+markers',
+    fig.add_scatter(x=df[datetime_col], y=df[duration_col], mode='lines+markers',
                     name='All Users')
 
     # Remove the year from the x-axis labels
@@ -122,7 +129,6 @@ def time_series_plot(df, datetime_column, duration_column, member_column, member
 
     if return_fig:
         return fig
-
     else:
         fig.show()
 
@@ -136,19 +142,20 @@ def main():
 
     df['distance'] = df.apply(lambda row: haversine_distance(row['start_lat'], row['start_lng'],
                                                              row['end_lat'], row['end_lng']), axis=1)
-    # Check for time!!
-    df = df[df['distance'] != 0]
 
     # Convert to datetime format to find the time elapsed during rides
     df = ride_duration(df, 'started_at', 'ended_at')
 
     # Plot overlapping Plotly KDE plots for distance travelled for members vs casual users
-    # create_dist_kde(df, 'member_casual', 'distance')
+    create_dist_kde(df, 'member_casual', 'distance')
 
-    # create_bubble_chart(df, 'distance', 'member_casual')
+    create_violin_plot(df, 'ride_duration_minutes', 'member_casual')
 
     # Generate the time series plot
     # time_series_plot(df, 'started_at', 'ride_duration_minutes', 'member_casual', 'member', 'casual')
+
+    grouped_outliers = remove_outliers(df, 'ride_duration_minutes', 'member_casual')[1]
+    print(grouped_outliers)
 
     # Save the DataFrame to a CSV file
     df.to_csv('bluebike_updated.csv', index=False)
