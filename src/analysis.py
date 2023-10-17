@@ -4,6 +4,8 @@ import plotly.express as px
 import seaborn as sns
 import math
 from matplotlib.dates import DayLocator
+from datetime import datetime
+
 
 
 def haversine_distance(lat1, lon1, lat2, lon2):
@@ -26,10 +28,14 @@ def haversine_distance(lat1, lon1, lat2, lon2):
     return distance
 
 
-def create_dist_kde(df, user_type_col, dist_col):
+def create_dist_kde(df, user_type_col, dist_col, return_fig=False):
     fig = px.histogram(df, x=dist_col, color=user_type_col, marginal="rug", title="Distance KDE Plot")
     fig.update_layout(xaxis_title="Distance (km)", yaxis_title="Density")
-    fig.show()
+
+    if return_fig:
+        return fig
+    else:
+        fig.show()
 
 
 def ride_duration(df, start_col, end_col):
@@ -133,29 +139,33 @@ def time_series_plot(df, datetime_col, duration_col, member_col, member_val, cas
         fig.show()
 
 
+
+
 def main():
     df = pd.read_csv("bluebike_trunc.csv")
 
     # Drop unnecessary columns
-    df.drop(['rideable_type', 'ride_id', 'start_station_id', 'end_station_id'], axis=1, inplace=True)
+    df.drop(['ride_id', 'start_station_id', 'end_station_id'], axis=1, inplace=True)
     df = df.dropna()
 
+    # Create distance column
     df['distance'] = df.apply(lambda row: haversine_distance(row['start_lat'], row['start_lng'],
                                                              row['end_lat'], row['end_lng']), axis=1)
+
 
     # Convert to datetime format to find the time elapsed during rides
     df = ride_duration(df, 'started_at', 'ended_at')
 
     # Plot overlapping Plotly KDE plots for distance travelled for members vs casual users
-    create_dist_kde(df, 'member_casual', 'distance')
+    #create_dist_kde(df, 'member_casual', 'distance')
 
-    create_violin_plot(df, 'ride_duration_minutes', 'member_casual')
+    # create_violin_plot(df, 'ride_duration_minutes', 'member_casual')
 
     # Generate the time series plot
-    # time_series_plot(df, 'started_at', 'ride_duration_minutes', 'member_casual', 'member', 'casual')
+    #time_series_plot(df, 'started_at', 'ride_duration_minutes', 'member_casual', 'member', 'casual')
 
     grouped_outliers = remove_outliers(df, 'ride_duration_minutes', 'member_casual')[1]
-    print(grouped_outliers)
+    # print(grouped_outliers)
 
     # Save the DataFrame to a CSV file
     df.to_csv('bluebike_updated.csv', index=False)

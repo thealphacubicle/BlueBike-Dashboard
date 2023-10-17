@@ -119,10 +119,3 @@ def make_sankey(df, col1, col2, add_cols=None, vals=None, return_fig=False, **kw
 
     else:
         fig.show()
-
-    ####################################TESTING############################################################
-# df = pd.DataFrame({'nationality': ['A', 'B', 'C', 'D'],
-#                        "gender": ['M', 'M', 'F', 'M'],
-#                        "decade": ['1930', '1940', '1930', '1940']})
-#
-# make_sankey(df, 'nationality', 'decade', 'gender')
