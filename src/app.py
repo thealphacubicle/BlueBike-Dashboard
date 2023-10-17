@@ -13,12 +13,10 @@ import numpy as np
 import math
 import analysis
 
-# https://raw.githubusercontent.com/thealphacubicle/BlueBike-Dashboard/main/src/bluebike_updated.csv
-
 # Load CSV data
 df = pd.read_csv('https://raw.githubusercontent.com/thealphacubicle/BlueBike-Dashboard/main/src/bluebike_updated.csv')
 
-# Create a Dash app with bootstrap styles
+# Create a Dash app with pre-defined CSS styles
 app = Dash(__name__, external_stylesheets=[dbc.themes.LUX])
 
 # Define the app layout
@@ -27,33 +25,19 @@ app.layout = dbc.Container([
     html.H1('Blue Bike Ridership Visualization', style={'textAlign': 'center', 'color': 'black',
                                                         'backgroundColor': 'lightblue', 'padding': '10px'}),
 
-    # TODO: Add about section to project
-    html.Div([
-        html.H2("About the Project:", style={'text-align': 'center', 'padding-top': '20px'}),
-
-        # TODO: Edit description once everything else is done
-        html.P("TO BE CHANGED.", style={'text-align': 'center', 'padding-top': '15px'}),
-        html.Hr()
-    ]),
-
     # First row
     dbc.Row([
         html.H2("Explore the Data:", style={'text-align': 'center', 'padding-top': '20px'}),
 
         # Select columns to explore dataset
-        dbc.Col(children=[
+        dbc.Col([
             dbc.Label('Pick a column to explore: ', style={'padding-bottom': '10px'}),
             dcc.Dropdown(id='columns-eda-dropdown',
                          options=[{'label': col, 'value': col} for col in df.columns
                                   if col in ['start_station_name', 'end_station_name', 'member_casual', 'distance',
                                              'ride_duration_minutes']]
                          ,
-                         value=df.columns[-3], multi=False),
-
-            # Describing the selected column
-            dbc.Label("Description: ", style={'padding-top': '35px', 'font-weight': 'bold'}),
-            html.P(children="CREATE CALLBACK FUNCTION TO INSERT METADATA DESCRIPTION HERE!!!",
-                   style={'padding-top': '10px', 'padding-bottom': '15px'}, id="column_description_text"),
+                         value='member_casual', multi=False),
 
             # Replace this with some other useful graph about chosen column
             html.H2("Column Visualization: ",
@@ -90,35 +74,30 @@ app.layout = dbc.Container([
 
     # TODO: Format the radio items nicely
     dbc.Row([
-        dbc.Col(
-            dcc.RadioItems(
-                id='radio-ride-type',
-                options=[
-                    {'label': 'All', 'value': 'rideable_type'},
-                    {'label': 'Member', 'value': 'member'},
-                    {'label': 'Casual', 'value': 'casual'},  # Replace accordingly
-                ],
-                labelStyle={'display': 'block'}
-        )),
-        dbc.Col(dcc.Graph(id='rides-map'), width=6)
+        dbc.Col([
+            dbc.Form([
+                html.Div([
+                    dbc.Label("Pick a rider type to see ride starting areas:"),
+                    dbc.RadioItems(
+                        id='radio-ride-type',
+                        options=[
+                            {'label': 'All Riders', 'value': 'rideable_type'},
+                            {'label': 'Member', 'value': 'member'},
+                            {'label': 'Casual', 'value': 'casual'},  # Replace accordingly
+                        ],
+                        value='rideable_type')
+                ]),
+            ])
+        ]),
+        dbc.Col([
+            dbc.Col(dcc.Graph(id='rides-map'), width=15)
+        ])
     ])
+
 ], style={'backgroundColor': 'white', 'padding': '20px'}, fluid=True)
 
 
 ########################################################################################################################
-# TODO: CREATE CALLBACK FUNCTIONS FOR ALL DYNAMIC ELEMENTS
-
-# TODO: Create a metadata dictionary to map column to respective description
-@app.callback(Output("column_description_text", "children"), Input('columns-eda-dropdown', 'value'))
-def print_column_info(column):
-    """
-    Callback function to print the selected column's metadata
-    :param column: Column selected from dropdown menu
-    :return: Text about the column
-    """
-    return f"Replace with information about {column}!!!"
-
-
 @app.callback(Output("column_statistics", "figure"), Input('columns-eda-dropdown', 'value'))
 def viz_statistics_of_column(column):
     """
@@ -132,8 +111,10 @@ def viz_statistics_of_column(column):
     value_counts = df[column].value_counts()
     places = ['start_station_name', 'end_station_name']
 
+    if column is None:
+        column = "member_casual"
     # Displaying sankey diagram for columns that are departure/arrival stations
-    if column in places:
+    elif column in places:
         counts_df = sk.create_value_column(df, ['member_casual', column], 'count')
 
         counts_df = counts_df[counts_df['count'] >= 850]
@@ -161,15 +142,18 @@ def viz_statistics_of_column(column):
     return fig
 
 
-# TODO: Map update not working when "All" selected
 @app.callback(Output('rides-map', 'figure'), Input('radio-ride-type', 'value'))
 def update_rides_map(user_type):
-    filtered_df = df[df['member_casual'] == user_type]
+    if user_type == 'rideable_type':
+        filtered_df = df
+    else:
+        filtered_df = df[df['member_casual'] == user_type]
 
-    fig = px.scatter_mapbox(filtered_df, lat="start_lat", lon="start_lng", color="rideable_type",
+    fig = px.scatter_mapbox(filtered_df, lat="start_lat", lon="start_lng", opacity=0.9, zoom=10, color='member_casual',
                             title="Selection Points of All Rides", mapbox_style="open-street-map")
 
     return fig
+
 
 
 # Run the app
