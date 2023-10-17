@@ -16,7 +16,7 @@ import analysis
 # https://raw.githubusercontent.com/thealphacubicle/BlueBike-Dashboard/main/src/bluebike_updated.csv
 
 # Load CSV data
-df = pd.read_csv('/Users/srihariraman/PycharmProjects/BlueBike-Dashboard/src/bluebike_updated.csv')
+df = pd.read_csv('https://raw.githubusercontent.com/thealphacubicle/BlueBike-Dashboard/main/src/bluebike_updated.csv')
 
 # Create a Dash app with bootstrap styles
 app = Dash(__name__, external_stylesheets=[dbc.themes.LUX])
