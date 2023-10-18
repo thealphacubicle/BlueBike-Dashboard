@@ -1,7 +1,7 @@
 """
 Runs the Dash dashboard interface
 DS3500 HW2
-Authors: Srihari Raman & Reema Sharma
+Authors: Srihari Raman
 """
 from dash import Dash, dcc, html, dash_table, Input, Output
 import plotly.express as px
@@ -42,7 +42,7 @@ app.layout = dbc.Container([
 
         ]),
 
-        # Replace this with some other useful graph about chosen column
+        # Column viz
         html.H2("Column Visualization: ",
                 style={'padding-top': '20px', 'font-weight': 'bold', 'text-align': 'center'}),
         dcc.Graph(id="column_statistics"),
@@ -75,7 +75,7 @@ app.layout = dbc.Container([
 
 ], style={'backgroundColor': 'white', 'padding': '20px'}, fluid=True)
 
-
+# Callback functions
 @app.callback(Output("column_statistics", "figure"), Input('columns-eda-dropdown', 'value'))
 def viz_statistics_of_column(column):
     """
@@ -89,9 +89,11 @@ def viz_statistics_of_column(column):
     value_counts = df[column].value_counts()
     places = ['start_station_name', 'end_station_name']
 
+    # Pick various graphs depending on column
     if column is None:
         column = "member_casual"
-    # Displaying sankey diagram for columns that are departure/arrival stations
+
+
     elif column in places:
         counts_df = sk.create_value_column(df, ['member_casual', column], 'count')
 
@@ -100,7 +102,6 @@ def viz_statistics_of_column(column):
         fig = sk.make_sankey(counts_df, 'member_casual', column,
                              vals=None, return_fig=True, title_text=f"Member Type to {column}")
 
-    # Graph distance
     elif column == 'distance':
         fig = analysis.create_dist_kde(df, 'member_casual', column, return_fig=True)
         fig.update_xaxes(range=[0, math.ceil(np.quantile(df[column], 0.75) * 2.25)])
@@ -127,6 +128,11 @@ def viz_statistics_of_column(column):
 
 @app.callback(Output('mean_indicator', 'figure'), Input("radioitems-input", "value"))
 def mean_column_indicator(column):
+    """
+    Callback function for mean column indicator
+    :param column: Grouping column
+    :return: Indicator (Plotly Go) graph
+    """
     filtered_df = df[df['member_casual'] == column]
 
     figure = go.Figure(go.Indicator(
@@ -140,6 +146,11 @@ def mean_column_indicator(column):
 
 @app.callback(Output('ride_duration_indicator', 'figure'), Input("radioitems-input", "value"))
 def ride_duration_indicator(column):
+    """
+    Callback function for ride duration indicator
+    :param column: Grouping column for metrics
+    :return: Indicator (Plotly Go) graph
+    """
     filtered_df = df[df['member_casual'] == column]
 
     figure = go.Figure(go.Indicator(
@@ -153,6 +164,11 @@ def ride_duration_indicator(column):
 
 @app.callback(Output('speed_avg_indicator', 'figure'), Input("radioitems-input", "value"))
 def speed_indicator(column):
+    """
+    Callback function for speed indicator
+    :param column: Grouping column
+    :return: Indicator (Plotly Go) graph
+    """
     filtered_df = df[df['member_casual'] == column]
     figure = go.Figure(go.Indicator(
         mode='number',
